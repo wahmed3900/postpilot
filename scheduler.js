@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const axios = require('axios');
-const Post = require('../models/Post');
-const User = require('../models/User');
+const Post = require('./Post');
+const User = require('./User');
 
 // Publish a post to LinkedIn
 async function publishToLinkedIn(post, user) {
