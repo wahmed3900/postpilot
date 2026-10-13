@@ -2,6 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const User = require('./User');
+const { requireAuth } = require('./requireAuth');
 const router = express.Router();
 
 const LINKEDIN_AUTH_URL = 'https://www.linkedin.com/oauth/v2/authorization';
@@ -75,12 +76,14 @@ router.get('/linkedin/callback', async (req, res) => {
 });
 
 // Get current logged-in user
-router.get('/me', async (req, res) => {
-  if (!req.user) {
-    return res.status(401).json({ error: 'Not authenticated' });
+router.get('/me', requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('-linkedinAccessToken');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
   }
-  const user = await User.findById(req.user.userId).select('-linkedinAccessToken');
-  res.json(user);
 });
 
 // Logout (stateless — client deletes token from localStorage)

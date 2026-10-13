@@ -5,11 +5,14 @@ const User = require('./User');
 
 // Publish a post to LinkedIn
 async function publishToLinkedIn(post, user) {
-  // First get the LinkedIn member URN
-  const profileRes = await axios.get('https://api.linkedin.com/v2/userinfo', {
-    headers: { Authorization: `Bearer ${user.linkedinAccessToken}` },
-  });
-  const authorUrn = `urn:li:person:${profileRes.data.sub}`;
+  // Use saved linkedinId or fetch member URN as fallback
+  let authorUrn = user.linkedinId ? `urn:li:person:${user.linkedinId}` : null;
+  if (!authorUrn) {
+    const profileRes = await axios.get('https://api.linkedin.com/v2/userinfo', {
+      headers: { Authorization: `Bearer ${user.linkedinAccessToken}` },
+    });
+    authorUrn = `urn:li:person:${profileRes.data.sub}`;
+  }
 
   // Create the post via LinkedIn API
   await axios.post(

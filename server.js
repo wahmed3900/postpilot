@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const session = require('express-session');
 const mongoose = require('mongoose');
 
 const authRoutes = require('./auth');
@@ -12,12 +11,6 @@ const app = express();
 
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 }
-}));
 
 app.use('/auth', authRoutes);
 app.use('/api/posts', postRoutes);
