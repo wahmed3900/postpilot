@@ -1,6 +1,6 @@
 const express = require('express');
-const Post = require('../models/Post');
-const { requireAuth } = require('../middleware/requireAuth');
+const Post = require('./Post');
+const { requireAuth } = require('./requireAuth');
 const router = express.Router();
 
 // Create a scheduled post
