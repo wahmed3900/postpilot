@@ -1,6 +1,6 @@
 const express = require('express');
 const axios = require('axios');
-const User = require('../models/User');
+const User = require('./User');
 const router = express.Router();
 
 const LINKEDIN_AUTH_URL = 'https://www.linkedin.com/oauth/v2/authorization';
