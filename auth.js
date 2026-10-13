@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const jwt = require('jsonwebtoken');
 const User = require('./User');
 const router = express.Router();
 
@@ -14,7 +15,7 @@ router.get('/linkedin', (req, res) => {
     client_id: process.env.LINKEDIN_CLIENT_ID,
     redirect_uri: process.env.LINKEDIN_REDIRECT_URI,
     scope: LINKEDIN_SCOPE,
-    state: Math.random().toString(36).substring(7), // CSRF protection
+    state: Math.random().toString(36).substring(7),
   });
   res.redirect(`${LINKEDIN_AUTH_URL}?${params}`);
 });
@@ -28,7 +29,6 @@ router.get('/linkedin/callback', async (req, res) => {
   }
 
   try {
-    // Exchange code for access token
     const tokenRes = await axios.post(LINKEDIN_TOKEN_URL, null, {
       params: {
         grant_type: 'authorization_code',
@@ -42,14 +42,12 @@ router.get('/linkedin/callback', async (req, res) => {
 
     const { access_token, expires_in } = tokenRes.data;
 
-    // Get LinkedIn profile info
     const profileRes = await axios.get('https://api.linkedin.com/v2/userinfo', {
       headers: { Authorization: `Bearer ${access_token}` },
     });
 
     const { sub: linkedinId, name, email } = profileRes.data;
 
-    // Upsert user in DB
     const user = await User.findOneAndUpdate(
       { linkedinId },
       {
@@ -62,10 +60,14 @@ router.get('/linkedin/callback', async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // Save user to session
-    req.session.userId = user._id;
+    // Issue JWT — avoids cross-origin cookie issues
+    const token = jwt.sign(
+      { userId: user._id.toString() },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-    res.redirect(`${process.env.CLIENT_URL}/dashboard`);
+    res.redirect(`${process.env.CLIENT_URL}/dashboard?token=${token}`);
   } catch (err) {
     console.error('LinkedIn OAuth error:', err.response?.data || err.message);
     res.redirect(`${process.env.CLIENT_URL}?error=oauth_failed`);
@@ -74,16 +76,15 @@ router.get('/linkedin/callback', async (req, res) => {
 
 // Get current logged-in user
 router.get('/me', async (req, res) => {
-  if (!req.session.userId) {
+  if (!req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
-  const user = await User.findById(req.session.userId).select('-linkedinAccessToken');
+  const user = await User.findById(req.user.userId).select('-linkedinAccessToken');
   res.json(user);
 });
 
-// Logout
+// Logout (stateless — client deletes token from localStorage)
 router.post('/logout', (req, res) => {
-  req.session.destroy();
   res.json({ message: 'Logged out' });
 });
 
